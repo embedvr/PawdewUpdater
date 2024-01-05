@@ -376,7 +376,7 @@ func main() {
 		color.Set(color.FgHiRed)
 		fmt.Print("\n\n")
 		fmt.Println("SMAPI was installed, but you need to make sure to add the following line to your launch options")
-		fmt.Println("\"" + path.Join(stardewRoute, "StardewModdngAPI.exe") + "\" %command%")
+		fmt.Println("\"" + path.Join(stardewRoute, "StardewModdingAPI.exe") + "\" %command%")
 		fmt.Println("You may follow this guide if you need help: https://imgur.com/a/JkDpfKK")
 		fmt.Print("\n")
 		color.Unset()
