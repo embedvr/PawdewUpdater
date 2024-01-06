@@ -23,6 +23,33 @@ import (
 	"github.com/google/go-github/v57/github"
 )
 
+type Config struct {
+	ModpackURL string `json:"modpackUrl"`
+}
+
+func LoadConfig() (Config, error) {
+	var config Config
+
+	//  check if exists
+	_, err := os.Stat("config.json")
+	if err != nil {
+		config.ModpackURL = "https://storage.embed.dog/modpacks/pawdew.zip"
+		return config, nil
+	}
+
+	configFile, err := os.Open("config.json")
+	if err != nil {
+		return config, fmt.Errorf("failed to open config file: %w", err)
+	}
+	defer configFile.Close()
+
+	jsonParser := json.NewDecoder(configFile)
+	jsonParser.Decode(&config)
+	return config, nil
+
+
+}
+
 
 func HandleInputError(err error) {
 	if err != nil {
@@ -174,8 +201,14 @@ func copyFile (src, dst string) error {
 func main() {
 	fmt.Println("welcome to pawdew updater by embed")
 	fmt.Print("https://github.com/embedvr/PawdewUpdater\n\n")
+
+	config, err := LoadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	steamDefault := false
-	_, err := os.Stat("C:\\Program Files (x86)\\Steam\\steamapps\\libraryfolders.vdf")
+	_, err = os.Stat("C:\\Program Files (x86)\\Steam\\steamapps\\libraryfolders.vdf")
 	if err == nil {
 		steamDefault = true
 	}
@@ -340,8 +373,7 @@ func main() {
 		}
 	}
 
-	url := "https://yumi.helium.ws/modpacks/pawdew.zip"
-	s.Suffix = " downloading modpack (" + url + ")"
+	s.Suffix = " downloading modpack (" + config.ModpackURL + ")"
 
 	zipPath := path.Join(tempPath, "modpack.zip")
 
