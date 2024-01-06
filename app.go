@@ -6,6 +6,7 @@ package main
 import (
 	"archive/zip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -37,12 +38,12 @@ func HandleInputError(err error) {
 func extractZip(src, dst string) error {
 	r, err := zip.OpenReader(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open zip file: %w", err)
 	}
 	defer r.Close()
 
 	if err := os.MkdirAll(dst, os.ModePerm); err != nil {
-		return err
+		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
 	for _, f := range r.File {
@@ -55,40 +56,55 @@ func extractZip(src, dst string) error {
 
 		efile, err := os.Create(epath)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create destination file: %w", err)
 		}
 		defer efile.Close()
 
 		freader, err := f.Open()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to open zip file: %w", err)
 		}
 		defer freader.Close()
 
 		if _, err := io.Copy(efile, freader); err != nil {
-			return err
+			return fmt.Errorf("failed to copy file: %w", err)
 		}
 	}
 	return nil
 }
 
+func downloadFileRetry(url, dst string, retries int) error {
+	for i := 0; i < retries; i++ {
+		err := downloadFile(url, dst)
+		if err == nil {
+			return nil
+		}
+		fmt.Printf("download attempt %d failed: %s\n", i+1, err.Error())
+		time.Sleep(1 * time.Second)
+	}
+	return fmt.Errorf("failed to download file after %d retries", retries)
+}
+
 func downloadFile(url, dst string) error {
 	out, err := os.Create(dst)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer out.Close()
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to download file: %w", err)
 	}
-
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download, unexpected status code: %s", resp.Status)
+	}
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to copy file: %w", err)
 	}
 
 	return nil
@@ -329,7 +345,7 @@ func main() {
 
 	zipPath := path.Join(tempPath, "modpack.zip")
 
-	err = downloadFile(url, zipPath)
+	err = downloadFileRetry(config.ModpackURL, zipPath, 3)
 	if err != nil {
 		panic(err)
 	}

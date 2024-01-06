@@ -23,3 +23,6 @@ go.work.sum
 
 # builds
 dist/
+
+# temporary folders
+pawdew_temp/
